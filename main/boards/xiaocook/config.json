@@ -1,0 +1,15 @@
+{
+  "type": "xiaocook",
+  "target": "esp32s3",
+  "builds": [
+    {
+      "name": "xiaocook-st7789-240x240",
+      "sdkconfig_append": [
+        "CONFIG_BOARD_TYPE_XIAOCOOK=y",
+        "CONFIG_LCD_ST7789_240X240=y",
+        "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y",
+        "CONFIG_WAKE_WORD_DISABLED=y"
+      ]
+    }
+  ]
+}

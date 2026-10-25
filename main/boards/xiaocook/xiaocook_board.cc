@@ -9,12 +9,14 @@
 #include "lamp_controller.h"
 #include "led/single_led.h"
 
-#include <esp_log.h>
 #include <driver/i2c_master.h>
-#include <esp_lcd_panel_vendor.h>
+#include <driver/spi_common.h>
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
-#include <driver/spi_common.h>
+#include <esp_lcd_panel_vendor.h>
+#include <esp_log.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #if defined(LCD_TYPE_ILI9341_SERIAL)
 #include "esp_lcd_ili9341.h"
@@ -108,13 +110,21 @@ private:
 #else
         ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(panel_io, &panel_config, &panel));
 #endif
-        
-        esp_lcd_panel_reset(panel);
 
-        esp_lcd_panel_init(panel);
-        esp_lcd_panel_invert_color(panel, DISPLAY_INVERT_COLOR);
-        esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY);
-        esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
+        ESP_LOGI(TAG, "LCD %dx%d: SPI mode %d, 40 MHz, offset %d,%d", DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                 DISPLAY_SPI_MODE, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y);
+        ESP_ERROR_CHECK(esp_lcd_panel_reset(panel));
+#if defined(CONFIG_LCD_ST7789_240X240) || defined(CONFIG_LCD_ST7789_240X240_7PIN)
+        // Match the reset and initialization settling time verified in screen-test.
+        vTaskDelay(pdMS_TO_TICKS(150));
+#endif
+        ESP_ERROR_CHECK(esp_lcd_panel_init(panel));
+#if defined(CONFIG_LCD_ST7789_240X240) || defined(CONFIG_LCD_ST7789_240X240_7PIN)
+        vTaskDelay(pdMS_TO_TICKS(150));
+#endif
+        ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel, DISPLAY_INVERT_COLOR));
+        ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY));
+        ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y));
 #ifdef  LCD_TYPE_GC9A01_SERIAL
         panel_config.vendor_config = &gc9107_vendor_config;
 #endif

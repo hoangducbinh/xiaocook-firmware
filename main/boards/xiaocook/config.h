@@ -130,7 +130,8 @@
 #define DISPLAY_OFFSET_X  0
 #define DISPLAY_OFFSET_Y  0
 #define DISPLAY_BACKLIGHT_OUTPUT_INVERT false
-#define DISPLAY_SPI_MODE 0
+// Verified on the XiaoCook 1.54-inch ST7789 with screen-test.
+#define DISPLAY_SPI_MODE 3
 #endif
 
 #ifdef CONFIG_LCD_ST7789_240X240_7PIN

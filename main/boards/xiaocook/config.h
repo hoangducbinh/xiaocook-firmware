@@ -42,6 +42,8 @@
 #define DISPLAY_RST_PIN       GPIO_NUM_10
 #define DISPLAY_CS_PIN        GPIO_NUM_8
 
+// ST7789 has no readback wiring: periodically reapply state after contact glitches.
+#define DISPLAY_RECOVERY_INTERVAL_MS 5000
 
 #ifdef CONFIG_LCD_ST7789_240X320
 #define LCD_TYPE_ST7789_SERIAL

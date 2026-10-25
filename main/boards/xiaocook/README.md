@@ -30,3 +30,53 @@ Tạo lại bằng Python có Pillow: `python3 main/boards/xiaocook/tools/genera
 GIF được đóng gói tự động vào assets partition khi build; `idf.py flash` nạp cả
 firmware và assets. Không cần đổi kiểu giao diện sang Emote. Hai theme dùng
 nền đen để khớp canvas GIF; thanh trạng thái và chữ hội thoại vẫn hiển thị.
+
+## Tiện ích từ cấu hình cộng đồng
+
+- Giao diện/âm báo tiếng Việt: dùng `sh main/boards/xiaocook/build.sh`. Script
+  chọn `--language vi-VN`; ngôn ngữ trả lời của AI vẫn phụ thuộc cấu hình server.
+- Hội thoại nhiều dòng: dùng tuỳ chọn `USE_MULTILINE_CHAT_MESSAGE` sẵn có
+  trong upstream. Tin nhắn dài có thể che một phần mắt trong lúc hiển thị.
+- BOOT bấm một lần: bắt đầu/kết thúc trò chuyện như trước. Bấm đúp: tắt loa;
+  bấm đúp lần nữa: khôi phục âm lượng trước đó (nếu đang 0 từ lúc khởi động,
+  khôi phục 50). Chỉ tắt loa, không tắt micro; thao tác chạy qua Schedule.
+
+Nguồn tham khảo:
+- https://github.com/78/xiaozhi-esp32 (bản địa hoá, các kiểu UI)
+- https://github.com/78/xiaozhi-esp32/blob/main/main/boards/bread-compact-wifi/compact_wifi_board.cc
+  (điều chỉnh âm lượng bằng nút và thông báo trên màn hình; XiaoCook dùng bấm đúp).
+
+Sau build, nạp bằng `python3 "$IDF_PATH/tools/idf.py" -p PORT flash monitor`.
+Cần kiểm tra thực tế tiếng Việt/dấu, xuống dòng, bấm đơn/đúp và âm lượng khi
+đang phát. Không tự bật AEC phần cứng hoặc deep sleep cho bo này.
+
+### Đánh thức giọng nói — tạm tắt
+
+Preset và config board hiện chọn `WAKE_WORD_DISABLED`: dùng BOOT để bắt đầu
+trò chuyện. Build bằng `sh main/boards/xiaocook/build.sh`; vẫn giữ tiếng Việt,
+GIF mắt xanh, hội thoại nhiều dòng và bấm đúp tắt/bật loa.
+
+Mã preset `himax` vẫn được giữ trong scripts/build.py. Để bật lại sau này:
+1. Bỏ `CONFIG_WAKE_WORD_DISABLED=y` khỏi config.json của board XiaoCook.
+2. Chạy `sh main/boards/xiaocook/build.sh --wake-word himax` rồi nạp firmware.
+
+Hi MAX dùng MultiNet7 tiếng Anh, nhãn/câu lệnh `Hi MAX`, ngưỡng 20%; thư viện
+ESP-SR chuyển chữ sang âm vị qua flite_g2p. Đây là nhận dạng lệnh tùy chỉnh,
+không phải WakeNet được huấn luyện riêng. Khi bật lại cần thử độ nhạy/gọi nhầm.
+Model được đóng gói trong assets cùng GIF; không thêm phân vùng model.
+https://docs.espressif.com/projects/esp-sr/en/latest/esp32s3/speech_command_recognition/README.html
+
+## Phục hồi LCD khi tiếp xúc chập chờn
+
+ST7789 240×240 được gửi lại lệnh thoát sleep, RGB565, hướng, inversion và
+bật hiển thị mỗi 5 giây, rồi yêu cầu LVGL vẽ lại toàn màn hình. Không reset
+ESP32 hoặc kéo chân RST định kỳ. Task riêng ưu tiên thấp giữ khóa LVGL khi
+gửi lệnh; giao dịch tham số SPI chờ DMA đang chạy hoàn tất. ST7789 init có
+khoảng chờ 100 ms nên hoạt ảnh có thể khựng ngắn mỗi chu kỳ.
+
+Giữ BOOT để yêu cầu gửi lại ngay; bấm đơn trò chuyện và bấm đúp tắt/bật loa
+vẫn giữ nguyên. Đổi chu kỳ tại DISPLAY_RECOVERY_INTERVAL_MS trong config.h.
+Đây là phát lại cấu hình chủ động, không phải phát hiện lỗi: module không có
+dây đọc phản hồi. Có thể hồi phục sau mất trạng thái/reset LCD khi kết nối
+ổn định trở lại; không sửa được dây đang hở/chập, sụt nguồn hoặc phần cứng hỏng.
+Cần bọc cách điện chân hở và cố định dây. Chưa kiểm chứng phục hồi trên bo.

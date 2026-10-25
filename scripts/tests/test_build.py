@@ -1876,3 +1876,19 @@ class ZipTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HiMaxPresetTests(unittest.TestCase):
+    def test_himax_selects_english_multinet_and_phonemes(self):
+        name, options, symbols = build._wake_word_sdkconfig_options("Hi MAX".replace(" ", "_"), "esp32s3")
+        self.assertEqual(name, "himax")
+        self.assertIn("CONFIG_USE_CUSTOM_WAKE_WORD=y", options)
+        self.assertIn("CONFIG_SR_MN_EN_MULTINET7_QUANT=y", options)
+        self.assertIn('CONFIG_CUSTOM_WAKE_WORD="Hi MAX"', options)
+        self.assertIn('CONFIG_CUSTOM_WAKE_WORD_DISPLAY="Hi MAX"', options)
+        self.assertNotIn("CONFIG_USE_AFE_WAKE_WORD=y", options)
+        self.assertIn("CONFIG_SR_MN_EN_MULTINET7_QUANT", symbols)
+
+    def test_himax_rejects_small_targets(self):
+        with self.assertRaises(ValueError):
+            build._wake_word_sdkconfig_options("himax", "esp32c3")

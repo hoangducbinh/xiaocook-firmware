@@ -353,12 +353,28 @@ def _wake_word_sdkconfig_options(
         options.append("CONFIG_WAKE_WORD_DISABLED=y")
         return normalized, options, ["CONFIG_WAKE_WORD_DISABLED"]
 
+    if normalized in {"himax", "hi_max"}:
+        if target not in _AFE_WAKE_WORD_TARGETS:
+            raise ValueError("Hi MAX requires an AFE target with PSRAM and English MultiNet7")
+        # esp_mn_commands_add() converts English text through flite_g2p in ESP-SR.
+        # This is a configurable command detector, not a trained WakeNet model.
+        options.extend((
+            "CONFIG_USE_CUSTOM_WAKE_WORD=y",
+            "CONFIG_SR_MN_EN_MULTINET7_QUANT=y",
+            'CONFIG_CUSTOM_WAKE_WORD="Hi MAX"',
+            'CONFIG_CUSTOM_WAKE_WORD_DISPLAY="Hi MAX"',
+            "CONFIG_CUSTOM_WAKE_WORD_THRESHOLD=20",
+        ))
+        return "himax", options, [
+            "CONFIG_USE_CUSTOM_WAKE_WORD", "CONFIG_SR_MN_EN_MULTINET7_QUANT",
+        ]
+
     if target not in _ESP_WAKE_WORD_TARGETS | _AFE_WAKE_WORD_TARGETS:
         raise ValueError(f"Wake-word selection is not supported for target {target}")
     if not _WAKE_WORD_MODEL_PATTERN.fullmatch(normalized):
         raise ValueError(
             f"Invalid wake word {wake_word!r}. Use 'disabled', "
-            "'nihaoxiaozhi', 'hiesp', or an ESP-SR model name such as "
+            "'nihaoxiaozhi', 'hiesp', 'himax', or an ESP-SR model name such as "
             "'wn9_jarvis_tts'."
         )
     if target in _LITE_WAKE_WORD_TARGETS and not normalized.startswith("wn9s_"):
@@ -1781,7 +1797,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         metavar="MODEL",
         help=(
             "Wake-word model (for example wn9_jarvis_tts), "
-            "'nihaoxiaozhi', 'hiesp', or 'disabled'. Defaults to nihaoxiaozhi "
+            "'nihaoxiaozhi', 'hiesp', 'himax' (custom MultiNet), or 'disabled'. Defaults to nihaoxiaozhi "
             "for zh-CN/zh-TW and hiesp otherwise; disabled on unsupported boards"
         ),
     )

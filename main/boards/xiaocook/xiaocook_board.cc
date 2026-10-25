@@ -1,4 +1,5 @@
 #include "application.h"
+#include "assets/lang_config.h"
 #include "button.h"
 #include "codecs/no_audio_codec.h"
 #include "config.h"
@@ -16,6 +17,7 @@
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
 #include <esp_log.h>
+#include <esp_lvgl_port.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -67,6 +69,64 @@ private:
  
     Button boot_button_;
     LcdDisplay* display_;
+    int unmuted_volume_ = 50;
+#if defined(CONFIG_LCD_ST7789_240X240) || defined(CONFIG_LCD_ST7789_240X240_7PIN)
+    esp_lcd_panel_handle_t recovery_panel_ = nullptr;
+    TaskHandle_t lcd_recovery_task_ = nullptr;
+
+    esp_err_t RestoreLcdState() {
+        // The first parameter transaction drains queued SPI/DMA transfers.
+        // LVGL must not enqueue another flush while panel commands are replayed.
+        esp_err_t err = esp_lcd_panel_init(recovery_panel_);
+        if (err == ESP_OK) {
+            err = esp_lcd_panel_invert_color(recovery_panel_, DISPLAY_INVERT_COLOR);
+        }
+        if (err == ESP_OK) {
+            err = esp_lcd_panel_swap_xy(recovery_panel_, DISPLAY_SWAP_XY);
+        }
+        if (err == ESP_OK) {
+            err = esp_lcd_panel_mirror(recovery_panel_, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
+        }
+        if (err == ESP_OK) {
+            err = esp_lcd_panel_disp_on_off(recovery_panel_, true);
+        }
+        return err;
+    }
+
+    void InitializeLcdRecovery() {
+        // The board is a process-lifetime singleton. This task shares its lifetime.
+        BaseType_t created = xTaskCreate(
+            [](void* context) {
+                auto* self = static_cast<XiaoCookBoard*>(context);
+                for (;;) {
+                    bool requested =
+                        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(DISPLAY_RECOVERY_INTERVAL_MS)) != 0;
+                    if (!lvgl_port_lock(100)) {
+                        continue;  // Skip a busy display; never stall the application loop.
+                    }
+                    esp_err_t err = self->RestoreLcdState();
+                    if (err == ESP_OK) {
+                        lv_obj_invalidate(lv_screen_active());
+                    }
+                    lvgl_port_unlock();
+                    if (err != ESP_OK) {
+                        ESP_LOGW(TAG, "LCD state replay failed: %s; will retry",
+                                 esp_err_to_name(err));
+                    } else if (requested) {
+                        ESP_LOGI(TAG, "LCD state replay sent; no hardware readback");
+                    }
+                }
+            },
+            "lcd_recovery", 4096, this, 1, &lcd_recovery_task_);
+        if (created != pdPASS) {
+            lcd_recovery_task_ = nullptr;
+            ESP_LOGW(TAG, "LCD automatic recovery task could not be created");
+        } else {
+            ESP_LOGI(TAG, "LCD state replay every %d ms; hold BOOT for immediate replay",
+                     DISPLAY_RECOVERY_INTERVAL_MS);
+        }
+    }
+#endif
 
     void InitializeSpi() {
         spi_bus_config_t buscfg = {};
@@ -138,6 +198,9 @@ private:
                 theme->set_text_color(lv_color_hex(0xFFFFFF));
             }
         }
+#if defined(CONFIG_LCD_ST7789_240X240) || defined(CONFIG_LCD_ST7789_240X240_7PIN)
+        recovery_panel_ = panel;
+#endif
         display_ = new SpiLcdDisplay(panel_io, panel,
                                     DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
     }
@@ -151,6 +214,27 @@ private:
             }
             app.ToggleChatState();
         });
+#if defined(CONFIG_LCD_ST7789_240X240) || defined(CONFIG_LCD_ST7789_240X240_7PIN)
+        boot_button_.OnLongPress([this]() {
+            if (lcd_recovery_task_ != nullptr) {
+                xTaskNotifyGive(lcd_recovery_task_);
+            }
+        });
+#endif
+        boot_button_.OnDoubleClick([this]() {
+            Application::GetInstance().Schedule([this]() {
+                auto* codec = GetAudioCodec();
+                if (codec->output_volume() > 0) {
+                    unmuted_volume_ = codec->output_volume();
+                    codec->SetOutputVolume(0);
+                    display_->ShowNotification(Lang::Strings::MUTED);
+                } else {
+                    codec->SetOutputVolume(unmuted_volume_);
+                    display_->ShowNotification(Lang::Strings::VOLUME +
+                                               std::to_string(unmuted_volume_));
+                }
+            });
+        });
     }
 
     // 物联网初始化，添加对 AI 可见设备
@@ -163,6 +247,9 @@ public:
         boot_button_(BOOT_BUTTON_GPIO) {
         InitializeSpi();
         InitializeLcdDisplay();
+#if defined(CONFIG_LCD_ST7789_240X240) || defined(CONFIG_LCD_ST7789_240X240_7PIN)
+        InitializeLcdRecovery();
+#endif
         InitializeButtons();
         InitializeTools();
         if (DISPLAY_BACKLIGHT_PIN != GPIO_NUM_NC) {

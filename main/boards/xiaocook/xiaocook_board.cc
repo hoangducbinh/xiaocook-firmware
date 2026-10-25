@@ -1,13 +1,14 @@
-#include "wifi_board.h"
-#include "codecs/no_audio_codec.h"
-#include "display/lcd_display.h"
-#include "system_reset.h"
 #include "application.h"
 #include "button.h"
+#include "codecs/no_audio_codec.h"
 #include "config.h"
-#include "mcp_server.h"
+#include "display/lcd_display.h"
+#include "display/lvgl_display/lvgl_theme.h"
 #include "lamp_controller.h"
 #include "led/single_led.h"
+#include "mcp_server.h"
+#include "system_reset.h"
+#include "wifi_board.h"
 
 #include <driver/i2c_master.h>
 #include <driver/spi_common.h>
@@ -128,6 +129,15 @@ private:
 #ifdef  LCD_TYPE_GC9A01_SERIAL
         panel_config.vendor_config = &gc9107_vendor_config;
 #endif
+        // The robot-eye GIFs have a black canvas; match both selectable themes.
+        auto& themes = LvglThemeManager::GetInstance();
+        for (const char* name : {"light", "dark"}) {
+            if (auto* theme = themes.GetTheme(name)) {
+                theme->set_background_color(lv_color_hex(0x000000));
+                theme->set_chat_background_color(lv_color_hex(0x000000));
+                theme->set_text_color(lv_color_hex(0xFFFFFF));
+            }
+        }
         display_ = new SpiLcdDisplay(panel_io, panel,
                                     DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
     }

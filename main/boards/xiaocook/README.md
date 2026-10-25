@@ -20,3 +20,13 @@ python3 scripts/build.py xiaocook --name xiaocook-st7789-240x240
 
 Sau khi nạp cần xác nhận UI hiển thị đúng màu, đủ khung và không nhiễu.
 Build thành công không thay thế kiểm tra trên phần cứng.
+
+## GIF mắt robot xanh dương
+
+Bộ 21 biểu cảm Otto, nền đen và mắt #00A0FF, khung 240×240.
+Nguồn MIT: https://github.com/txp666/otto-emoji-gif-component (component 1.4.0).
+Mã tạo ảnh thích nghi tại `tools/generate_eyes.py`, license tại `assets/LICENSE-Otto`.
+Tạo lại bằng Python có Pillow: `python3 main/boards/xiaocook/tools/generate_eyes.py`.
+GIF được đóng gói tự động vào assets partition khi build; `idf.py flash` nạp cả
+firmware và assets. Không cần đổi kiểu giao diện sang Emote. Hai theme dùng
+nền đen để khớp canvas GIF; thanh trạng thái và chữ hội thoại vẫn hiển thị.

@@ -18,6 +18,24 @@ SPEC.loader.exec_module(BUILD)
 
 
 class BuildDefaultAssetsTest(unittest.TestCase):
+    def test_board_owned_emoji_collection_is_packaged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            collection = root / "eyes"
+            collection.mkdir()
+            (collection / "neutral.gif").write_bytes(b"GIF89a")
+            assets = root / "assets"
+            assets.mkdir()
+            resolved = BUILD.get_emoji_collection_path(str(collection), "unused")
+            entries = BUILD.process_emoji_collection(resolved, str(assets))
+            self.assertEqual(entries, [{"name": "neutral", "file": "neutral.gif"}])
+            self.assertEqual((assets / "neutral.gif").read_bytes(), b"GIF89a")
+
+    def test_missing_board_owned_collection_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError):
+                BUILD.get_emoji_collection_path(str(Path(directory) / "missing"), "unused")
+
     def test_text_font_metadata_uses_bundle_charset_size_and_bpp(self):
         with tempfile.TemporaryDirectory() as directory:
             assets = Path(directory)

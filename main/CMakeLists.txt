@@ -95,7 +95,7 @@ if(CONFIG_BOARD_TYPE_XIAOCOOK)
     set(BOARD_DIR "xiaocook")
     set(BUILTIN_TEXT_FONT font_noto_sans_basic_16_4)
     set(BUILTIN_ICON_FONT font_material_symbols_16_4)
-    set(DEFAULT_EMOJI_COLLECTION noto-color-emoji_32)
+    set(DEFAULT_EMOJI_COLLECTION "${CMAKE_CURRENT_SOURCE_DIR}/boards/xiaocook/assets/eyes-blue")
 
 elseif(CONFIG_BOARD_TYPE_BREAD_COMPACT_WIFI)
     set(BOARD_DIR "bread-compact-wifi")
@@ -1378,9 +1378,13 @@ function(build_default_assets_bin)
     # Add default emoji collection if defined
     if(DEFAULT_EMOJI_COLLECTION)
         list(APPEND BUILD_ARGS "--emoji_collection" "${DEFAULT_EMOJI_COLLECTION}")
-        file(GLOB DEFAULT_EMOJI_FILES CONFIGURE_DEPENDS
-            "${NOTO_FONTS_PATH}/png/${DEFAULT_EMOJI_COLLECTION}/*"
-        )
+        if(IS_ABSOLUTE "${DEFAULT_EMOJI_COLLECTION}")
+            file(GLOB DEFAULT_EMOJI_FILES CONFIGURE_DEPENDS
+                "${DEFAULT_EMOJI_COLLECTION}/*.gif" "${DEFAULT_EMOJI_COLLECTION}/*.png")
+        else()
+            file(GLOB DEFAULT_EMOJI_FILES CONFIGURE_DEPENDS
+                "${NOTO_FONTS_PATH}/png/${DEFAULT_EMOJI_COLLECTION}/*")
+        endif()
         list(APPEND DEFAULT_ASSETS_DEPENDENCIES ${DEFAULT_EMOJI_FILES})
     endif()
 

@@ -1,5 +1,18 @@
 # XiaoCook — màn hình đã kiểm tra
 
+## Build và nạp bằng lệnh ngắn
+
+```sh
+source /Users/macos/Developer/XiaoCook/tools/xiaocook.zsh
+xc main          # Build, nạp, mở log; giữ preset tiếng Việt, wake word tắt
+xc main build    # Chỉ build
+xc test          # Nạp bản test LCD độc lập
+```
+
+Hướng dẫn đầy đủ: `/Users/macos/Developer/XiaoCook/BUILD-AND-FLASH.md`.
+Thoát log bằng Ctrl+]. Helper dùng Python cố định và tự xử lý cache cũ.
+
+
 ESP32-S3, LCD IPS ST7789 1.54 inch 240×240. Cấu hình được đối chiếu với
 project độc lập `/Users/macos/Developer/XiaoCook/screen-test` đã chạy đủ mẫu màu.
 
@@ -80,3 +93,13 @@ vẫn giữ nguyên. Đổi chu kỳ tại DISPLAY_RECOVERY_INTERVAL_MS trong co
 dây đọc phản hồi. Có thể hồi phục sau mất trạng thái/reset LCD khi kết nối
 ổn định trở lại; không sửa được dây đang hở/chập, sụt nguồn hoặc phần cứng hỏng.
 Cần bọc cách điện chân hở và cố định dây. Chưa kiểm chứng phục hồi trên bo.
+
+## Mắt xanh vuông — preset main hiện tại
+
+`xc main` đóng gói bộ `assets/eyes-square-blue`: 21 GIF xanh #00A0FF trên
+nền đen, góc bo nhỏ (roundness tối đa 0.32), giữ chớp mắt/đảo mắt và biểu cảm.
+Bộ Otto tròn cũ ở `assets/eyes-blue` vẫn được giữ nhưng không đóng gói cùng.
+Tạo lại bộ vuông: `python3 main/boards/xiaocook/tools/generate_eyes.py --style square`.
+Tạo lại bộ tròn: thay `--style square` bằng `--style round`. Cần Python có Pillow.
+Renderer dựa trên mã Otto MIT đã ghi nguồn ở trên, không đưa thư viện RoboEyes
+Arduino vào firmware. Không đổi cấu hình SPI hoặc cơ chế phục hồi LCD.

@@ -46,6 +46,7 @@ EYE_Y = 120.0
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "assets" / "eyes-blue"
+SQUARE_EYES = False
 
 
 # --------------------------------------------------------------------------
@@ -321,7 +322,8 @@ def draw_eye(painter: Painter, eye: Eye, side: int) -> None:
     if eye.heart > 0:
         outline = heart_outline(eye.x, eye.y, eye.w, height, eye.heart)
     else:
-        outline = rounded_outline(eye.x, eye.y, eye.w, height, eye.round)
+        outline = rounded_outline(eye.x, eye.y, eye.w, height,
+                                  min(eye.round, 0.32) if SQUARE_EYES else eye.round)
     painter.polygon(outline, target=layer)
 
     if eye.hole > 0:
@@ -823,10 +825,15 @@ def save_gif(name: str) -> Path:
 
 
 def main() -> None:
+    global OUTPUT_DIR, SQUARE_EYES
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("names", nargs="*", metavar="name",
                         help="expressions to render (default: all)")
+    parser.add_argument("--style", choices=("round", "square"), default="square",
+                        help="eye geometry; square is the XiaoCook main preset")
     args = parser.parse_args()
+    SQUARE_EYES = args.style == "square"
+    OUTPUT_DIR = ROOT / "assets" / ("eyes-square-blue" if SQUARE_EYES else "eyes-blue")
     unknown = sorted(set(args.names) - set(EXPRESSIONS))
     if unknown:
         parser.error(f"unknown expression(s): {', '.join(unknown)}")

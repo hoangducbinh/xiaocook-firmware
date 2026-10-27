@@ -54,7 +54,11 @@ void WifiBoard::StartNetwork() {
 
     // Initialize WiFi manager
     WifiManagerConfig config;
+#ifdef WIFI_CONFIG_SSID_PREFIX
+    config.ssid_prefix = WIFI_CONFIG_SSID_PREFIX;
+#else
     config.ssid_prefix = "Xiaozhi";
+#endif
     config.language = Lang::CODE;
     config.show_ota_config = true;
     config.show_sleep_config = true;

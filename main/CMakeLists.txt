@@ -1544,3 +1544,16 @@ if ("${size}" AND "${offset}")
 else()
     message(STATUS "Assets partition not found, using v1 partition table")
 endif()
+
+# XiaoCook owns its captive-portal assets. Redirect only the two embedded
+# HTML references, leaving the managed Wi-Fi component and its API untouched.
+if(CONFIG_BOARD_TYPE_XIAOCOOK AND NOT CMAKE_BUILD_EARLY_EXPANSION)
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE WIFI_CONFIG_SSID_PREFIX="XiaoCook")
+    foreach(page wifi_configuration wifi_configuration_done)
+        target_add_binary_data(${COMPONENT_LIB}
+            "${CMAKE_CURRENT_SOURCE_DIR}/boards/xiaocook/portal/xiaocook_${page}.html" TEXT)
+        target_link_libraries(${COMPONENT_LIB} INTERFACE
+            "-Wl,--wrap=_binary_${page}_html_start"
+            "-Wl,--defsym=__wrap__binary_${page}_html_start=_binary_xiaocook_${page}_html_start")
+    endforeach()
+endif()
